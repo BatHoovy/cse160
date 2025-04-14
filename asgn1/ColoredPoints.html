@@ -10,8 +10,20 @@
     Please use a browser that supports "canvas"
     </canvas>
     <p></p>
+    <p id="numdot"> XXX</p>
     <button type="button" id="green">Green</button>
     <button type="button" id="red">Red</button>
+    <button type="button" id="clear">Clear</button>
+    <p></p>
+    <button type="button" id="pointButton">Point</button>
+    <button type="button" id="triangleButton">Triangle</button>
+    <button type="button" id="circleButton">Circle</button>
+    <p></p>
+    <button type="button" id="draw">Draw</button>
+
+
+
+
     <p></p>
     Red <input type="range" min="0" max="100" value="100" class="slider" id="redSlide">
     <p></p>
@@ -21,11 +33,17 @@
     
     <p></p>
     Size <input type="range" min="5" max="40" value="0" class="slider" id="sizeSlide">
+    <p></p>
+    Segments <input type="range" min="5" max="20  "value="0" class="slider" id="segSlide">
+
 
     <script src="../lib/webgl-utils.js"></script>
     <script src="../lib/webgl-debug.js"></script>
     <script src="../lib/cuon-utils.js"></script>
     <script src="ColoredPoints.js"></script>
     <script src="Point.js"></script>
+    <script src="Triangle.js"></script>
+    <script src="Circle.js"></script>
+
   </body>
 </html>

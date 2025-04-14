@@ -61,26 +61,137 @@ function connectVariablesToGLSL(){
     return;
   }
 }
+
+const POINT=0;
+const TRIANGLE=1;
+const CIRCLE=2;
 //Globals related to UI ELEMENTS
 let g_selectedColor=[1.0,1.0,1.0,1.0];
 let g_selectedSize=5;
+let g_selectedSeg=10;
+let g_selectedType=POINT;
 function addActionsForHTMLUI(){
   document.getElementById("green").onclick=function(){g_selectedColor=[0.0,1.0,0.0,1.0];};
   document.getElementById("red").onclick=function(){g_selectedColor=[1.0,0.0,0.0,1.0];};
+  document.getElementById("clear").onclick=function(){g_shapesList=[];renderAllShapes();};
+
+  document.getElementById("pointButton").onclick=function(){g_selectedType=POINT};
+  document.getElementById("triangleButton").onclick=function(){g_selectedType=TRIANGLE};
+  document.getElementById("circleButton").onclick=function(){g_selectedType=CIRCLE};
+
+  document.getElementById("draw").onclick=function(){drawTriangles();};
+
+
 
   document.getElementById("redSlide").addEventListener('mouseup',function(){g_selectedColor[0]=this.value/100;});
   document.getElementById("greenSlide").addEventListener('mouseup',function(){g_selectedColor[1]=this.value/100;});
   document.getElementById("blueSlide").addEventListener('mouseup',function(){g_selectedColor[2]=this.value/100;});
 
   document.getElementById("sizeSlide").addEventListener('mouseup',function(){g_selectedSize=this.value;});
+  document.getElementById("segSlide").addEventListener('mouseup',function(){g_selectedSeg=this.value;});
 
+
+}
+const PREDEFINED_TRIANGLES = [
+  { 
+      vertices: [-0.2, 0.0, 0.0, 0.0, 0.0, 0.2],
+      color: [1.0, 0.0, 0.0, 1.0]  
+  },
+  { 
+      vertices: [0.2, 0.0, 0.0, 0.0, 0.0, 0.2],
+      color: [0.0, 1.0, 0.0, 1.0]  
+  },
+  { 
+      vertices: [-0.2, 0.0, 0.0, 0.0, 0.0, -0.2],
+      color: [0.0, 0.0, 1.0, 1.0]  
+  },
+  {
+    vertices: [0.2, 0.0, 0.0, 0.0, 0.0, -0.2],
+    color: [1.0, 1.0, 1.0, 1.0]  
+},
+{
+  vertices: [0.2, 0.0, 0.4, 0.0, 0.4, 0.2],
+  color: [1.0, 1.0, 1.0, 1.0]  
+},
+{
+  vertices: [0.2, 0.0, 0.2, 0.2, 0.0, 0.2],
+  color: [1.0, 1.0, 1.0, 1.0]  
+},
+{
+  vertices: [0.2, 0.0, 0.2, 0.2, 0.4, 0.2],
+  color: [1.0, 0.0, 1.0, 1.0]  
+},
+{
+  vertices: [0.2, 0.2, 0.4, 0.2, 0.2, 0.4],
+  color: [1.0, 0.5, 1.0, 1.0]  
+},
+{
+  vertices: [0.2, 0.2, 0.2, 0.4, 0.0, 0.2],
+  color: [1.0, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, 0.0, -0.2, 0.2, 0.0, 0.2],
+  color: [1.0, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, 0.0, -0.4, 0.2, -0.4, 0.0],
+  color: [1.0, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, 0.0, -0.2, 0.2, -0.4, 0.2],
+  color: [0.3, 0.3, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, 0.2, -0.2, 0.4, 0, 0.2],
+  color: [1.0, 1.0, 0.3, 1.0]  
+},
+{
+  vertices: [-0.4, 0.2, -0.2, 0.2, -0.2, 0.4],
+  color: [1.0, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, 0.0, -0.2, -0.2, 0.0, -0.2],
+  color: [1.0, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.4, 0.0, -0.2, 0.0, -0.2, -0.2],
+  color: [0.3, 0.0, 0.5, 1.0]  
+},
+{
+  vertices: [-0.2, -0.2, 0.0, -0.2, 0.0, -0.4],
+  color: [1.0, 1.0, 1.2, 1.0]  
+},
+{
+  vertices: [0.2, 0.0, 0.2, -0.2, 0.0, -0.2],
+  color: [1.0, 1.0, 0.5, 1.0]  
+},
+{
+  vertices: [0.2, 0.0, 0.4, 0.0, 0.2, -0.2],
+  color: [0.5, 1.0, 0.5, 1.0]  
+},
+{
+  vertices: [0.2, -0.2, 0.0, -0.2, 0.0, -0.4],
+  color: [0.5, 1.0, 0.5, 1.0]  
+}
+
+];
+function drawTriangles(){
+  PREDEFINED_TRIANGLES.forEach(triData => {
+    let triangle = new Triangle();
+    triangle.vertices = triData.vertices;
+    triangle.color = triData.color; // Use current color
+    triangle.size = g_selectedSize;
+    g_shapesList.push(triangle);
+  });
+  renderAllShapes();
 }
 function main() {
   setupWebGL();
   connectVariablesToGLSL();
   addActionsForHTMLUI();
   // Register function (event handler) to be called on a mouse press
-  canvas.onmousedown = function(ev){ click(ev) };
+  canvas.onmousedown = click;
+  canvas.onmousemove= function(ev){if(ev.buttons==1){click(ev)}};
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -97,7 +208,15 @@ var g_shapesList=[]
 function click(ev) {
   
   [x,y]= convertCoordinatesEventToGL(ev);
-  let point = new Point();
+  let point;
+  if(g_selectedType==POINT){
+    point= new Point();
+  }else if(g_selectedType==TRIANGLE){
+    point=new Triangle();
+  }else{
+    point= new Circle();
+    point.segments=g_selectedSeg;
+  }
   point.position=[x,y];
   point.color=g_selectedColor.slice();
   point.size=g_selectedSize;
@@ -129,23 +248,24 @@ function convertCoordinatesEventToGL(ev){
 }
 
 function renderAllShapes(){
+  var startTime=performance.now();
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   var len = g_shapesList .length;
   for(var i = 0; i < len; i++) {
-    var xy = g_shapesList[i].position;
-    var rgba = g_shapesList[i].color;
-    var size = g_shapesList[i].size;
-
-    // Pass the position of a point to a_Position variable
-    gl.vertexAttrib3f(a_Position, xy[0], xy[1], 0.0);
-    // Pass the color of a point to u_FragColor variable
-    gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
-    
-    gl.uniform1f(u_Size,size);
-
-    // Draw
-    gl.drawArrays(gl.POINTS, 0, 1);
+    g_shapesList[i].render();
   }
+
+  var duration = performance.now() - startTime;
+  sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: "+ Math.floor(10000/duration),"numdot");
+}
+
+function sendTextToHTML(text,htmlID){
+  var htmlElm = document.getElementById(htmlID);
+  if(!htmlElm){
+    console.log("failed to get "+htmlID+"from HTML");
+    return;
+  }
+  htmlElm.innerHTML = text;
 }
