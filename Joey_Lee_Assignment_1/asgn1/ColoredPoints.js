@@ -179,7 +179,7 @@ function drawTriangles(){
   PREDEFINED_TRIANGLES.forEach(triData => {
     let triangle = new Triangle();
     triangle.vertices = triData.vertices;
-    triangle.color = triData.color; 
+    triangle.color = triData.color; // Use current color
     triangle.size = g_selectedSize;
     g_shapesList.push(triangle);
   });
