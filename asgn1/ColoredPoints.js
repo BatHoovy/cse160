@@ -252,10 +252,14 @@ function renderAllShapes(){
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  var len = g_shapesList .length;
-  for(var i = 0; i < len; i++) {
-    g_shapesList[i].render();
-  }
+  // var len = g_shapesList .length;
+  // for(var i = 0; i < len; i++) {
+  //   g_shapesList[i].render();
+  // }
+
+  var body = new Cube();
+  body.color=[1.0,0.0,0.0,1.0];
+  body.render();
 
   var duration = performance.now() - startTime;
   sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: "+ Math.floor(10000/duration),"numdot");
