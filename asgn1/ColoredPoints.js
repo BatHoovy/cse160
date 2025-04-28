@@ -179,7 +179,7 @@ function drawTriangles(){
   PREDEFINED_TRIANGLES.forEach(triData => {
     let triangle = new Triangle();
     triangle.vertices = triData.vertices;
-    triangle.color = triData.color; 
+    triangle.color = triData.color; // Use current color
     triangle.size = g_selectedSize;
     g_shapesList.push(triangle);
   });
@@ -252,14 +252,10 @@ function renderAllShapes(){
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  // var len = g_shapesList .length;
-  // for(var i = 0; i < len; i++) {
-  //   g_shapesList[i].render();
-  // }
-
-  var body = new Cube();
-  body.color=[1.0,0.0,0.0,1.0];
-  body.render();
+  var len = g_shapesList .length;
+  for(var i = 0; i < len; i++) {
+    g_shapesList[i].render();
+  }
 
   var duration = performance.now() - startTime;
   sendTextToHTML("numdot: " + len + " ms: " + Math.floor(duration) + " fps: "+ Math.floor(10000/duration),"numdot");
