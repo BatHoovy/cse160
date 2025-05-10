@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebGL 3D Cube</title>
+  </head>
+
+  <body onload="main()">
+    <canvas id="webgl" width="400" height="400">
+    Please use a browser that supports "canvas"
+    </canvas>
+    <p id="numdot"> XXX</p>
+    <p>Global Rotation</p>
+  Global Angle <input type="range" min="0" max="360" value="0" class="slider" id="globalAngleSlide"><span id="globalAngleValue">0</span>
+  <br>
+
+
+  <p>Joint Control</p>
+Shoulder Angle <input type="range" min="-180" max="180" value="0" class="slider" id="joint1Slide"><span id="joint1Value">0</span>
+<br>
+Elbow Angle <input type="range" min="-180" max="180" value="0" class="slider" id="joint2Slide"><span id="joint2Value">0</span>
+<br>
+Hand Angle <input type="range" min="-90" max="90" value="0" class="slider" id="joint3Slide"><span id="joint3Value">0</span>
+  <br>
+
+<p>Animation Control</p>
+    <button id="animOnButton">Animation ON</button>
+    <button id="animOffButton">Animation OFF</button>
+
+    
+
+    
+
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+
+    <script src="Cube.js"></script>
+    <script src="Cylinder.js"></script>
+    <script src="ColoredPoints.js"></script> </body>
+</html>
