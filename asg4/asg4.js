@@ -1,6 +1,5 @@
-// Phong calculated based on: https://en.wikipedia.org/wiki/Phong_reflection_model
 
-// Shaders (GLSL)
+// Shaders 
 let VSHADER=`
       precision mediump float;
       attribute vec3 a_Position;
@@ -34,7 +33,7 @@ let FSHADER=`
     uniform vec3 u_SpotlightPos;
     uniform vec3 u_SpotlightDir;       
     uniform float u_SpotlightCosCutoff;  
-    uniform float u_SpotlightExponent;   // Spotlight falloff
+    uniform float u_SpotlightExponent;   
 
     varying vec3 n;
     varying vec4 worldPos;
@@ -55,7 +54,7 @@ let FSHADER=`
     void main() {
         vec3 finalColor;
 
-        if (u_LightingOn == 0) { // Lighting is OFF
+        if (u_LightingOn == 0) { // Lighting is off
             finalColor = u_Color;
         } else { // Lighting is ON
             vec3 normalized_n = normalize(n);
@@ -222,8 +221,8 @@ function draw() {
 
 function addModel(color, shapeType) {
     let model = null;
-    if (shapeType === "cube") model = new Cube(color); //
-    else if (shapeType === "sphere") model = new Sphere(color); //
+    if (shapeType === "cube") model = new Cube(color); 
+    else if (shapeType === "sphere") model = new Sphere(color); 
     if (model) models.push(model);
     return model;
 }
