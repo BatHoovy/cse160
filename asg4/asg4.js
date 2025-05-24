@@ -21,13 +21,21 @@ let VSHADER=`
 let FSHADER=`
     precision mediump float;
     uniform vec3 u_Color;
-    uniform vec3 u_ambientColor;    // Will be controlled by sliders
-    uniform vec3 u_diffuseColor;    // Will be controlled by sliders
-    uniform vec3 u_specularColor;   // Will be controlled by sliders
-    uniform vec3 u_lightDirection;
-    uniform vec3 u_lightLocation;
+    uniform vec3 u_ambientColor;
+    uniform vec3 u_diffuseColor;    // Used by all lights for now
+    uniform vec3 u_specularColor;   // Used by all lights for now
+    uniform vec3 u_lightDirection;  // Directional light 1
+    uniform vec3 u_lightLocation;   // Point light 2 position
     uniform vec3 u_eyePosition;
     uniform int u_VisualizeNormals;
+    uniform int u_LightingOn;
+
+    // Spotlight Uniforms
+    uniform vec3 u_SpotlightPos;
+    uniform vec3 u_SpotlightDir;       // Normalized direction spotlight is pointing
+    uniform float u_SpotlightCosCutoff;  // Cosine of the spotlight's half-angle
+    uniform float u_SpotlightExponent;   // Spotlight falloff
+
     varying vec3 n;
     varying vec4 worldPos;
 
@@ -38,34 +46,61 @@ let FSHADER=`
         float nDotL = max(dot(l, normal), 0.0);
         return dColor * u_Color * nDotL;
     }
-    vec3 calcSpecular(vec3 r, vec3 v, vec3 sColor){ // Added sColor parameter
+    vec3 calcSpecular(vec3 r, vec3 v, vec3 sColor){
         float rDotV = max(dot(r,v), 0.0);
-        float rDotVPowS = pow(rDotV, 32.0); 
-        return sColor * u_Color * rDotVPowS; // Use sColor instead of u_specularColor
+        float rDotVPowS = pow(rDotV, 32.0);
+        return sColor * u_Color * rDotVPowS;
     }
 
     void main() {
-        vec3 normalized_n = normalize(n); 
-        if (u_VisualizeNormals == 1) {
-            gl_FragColor = vec4(normalized_n * 0.5 + 0.5, 1.0); 
-        } else {
-            vec3 l1 = normalize(u_lightDirection); 
-            vec3 l2 = normalize(u_lightLocation - worldPos.xyz); 
-            vec3 v = normalize(u_eyePosition - worldPos.xyz);   
-            vec3 r1 = reflect(-l1, normalized_n); 
-            vec3 r2 = reflect(-l2, normalized_n); 
+        vec3 finalColor;
 
-            vec3 ambient = calcAmbient(); // Uses u_ambientColor internally
+        if (u_LightingOn == 0) { // Lighting is OFF
+            finalColor = u_Color;
+        } else { // Lighting is ON
+            vec3 normalized_n = normalize(n);
+            if (u_VisualizeNormals == 1) { // Normal visualization mode
+                finalColor = normalized_n * 0.5 + 0.5;
+            } else { // Standard Phong lighting
+                vec3 ambient = calcAmbient();
+                vec3 totalDiffuse = vec3(0.0);
+                vec3 totalSpecular = vec3(0.0);
 
-            vec3 diffuse1 = calcDiffuse(l1, normalized_n, u_diffuseColor); // Pass u_diffuseColor
-            vec3 specular1 = calcSpecular(r1, v, u_specularColor);      // Pass u_specularColor
+                vec3 v = normalize(u_eyePosition - worldPos.xyz); // View vector
 
-            vec3 diffuse2 = calcDiffuse(l2, normalized_n, u_diffuseColor); // Pass u_diffuseColor
-            vec3 specular2 = calcSpecular(r2, v, u_specularColor);      // Pass u_specularColor
-            
-            vec3 v_Color = ambient + diffuse1 + specular1 + diffuse2 + specular2; 
-            gl_FragColor = vec4(v_Color, 1.0);
+                // Light 1: Directional
+                vec3 l1 = normalize(u_lightDirection);
+                vec3 r1 = reflect(-l1, normalized_n);
+                totalDiffuse += calcDiffuse(l1, normalized_n, u_diffuseColor);
+                totalSpecular += calcSpecular(r1, v, u_specularColor);
+
+                // Light 2: Point
+                vec3 l2_vec = u_lightLocation - worldPos.xyz;
+                vec3 l2 = normalize(l2_vec);
+                vec3 r2 = reflect(-l2, normalized_n);
+                totalDiffuse += calcDiffuse(l2, normalized_n, u_diffuseColor);
+                totalSpecular += calcSpecular(r2, v, u_specularColor);
+
+                // Light 3: Spotlight
+                vec3 spotToFragVec = worldPos.xyz - u_SpotlightPos; 
+                float spotDist = length(spotToFragVec);
+                vec3 spotToFragDir = normalize(spotToFragVec); 
+
+                float spotDot = dot(-spotToFragDir, normalize(u_SpotlightDir));
+
+                if (spotDot > u_SpotlightCosCutoff) { 
+                    float spotEffect = pow(spotDot, u_SpotlightExponent);
+                    
+                    vec3 l_spot = -spotToFragDir; 
+                    vec3 r_spot = reflect(-l_spot, normalized_n);
+
+                    totalDiffuse += calcDiffuse(l_spot, normalized_n, u_diffuseColor) * spotEffect;
+                    totalSpecular += calcSpecular(r_spot, v, u_specularColor) * spotEffect;
+                }
+                finalColor = ambient + totalDiffuse + totalSpecular;
+            }
         }
+        gl_FragColor = vec4(finalColor, 1.0);
     }
 `;
 
@@ -73,26 +108,40 @@ let modelMatrix = new Matrix4();
 let normalMatrix = new Matrix4();
 let models = [];
 
+// Existing light properties
 let lightDirection = new Vector3([1.0, 1.0, 1.0]);
-let lightLocation = new Vector3([0.0, 0.5, 1.0]); 
+let lightLocation = new Vector3([0.0, 0.5, 1.0]);
+let lightBaseX = lightLocation.elements[0];
+let g_lastTime = Date.now();
+const lightAnimationSpeed = 0.5;
+const lightAnimationMagnitude = 2.0;
 
-let lightBaseX = lightLocation.elements[0]; 
-let g_lastTime = Date.now(); 
-const lightAnimationSpeed = 0.5; 
-const lightAnimationMagnitude = 2.0; 
-
-// << NEW: Global variables for light color components >>
 let ambientLightColor = new Vector3([0.2, 0.2, 0.2]);
 let diffuseLightColor = new Vector3([0.8, 0.8, 0.8]);
 let specularLightColor = new Vector3([1.0, 1.0, 1.0]);
 
+// Spotlight Properties
+let spotlightPos = new Vector3([0, 2, 3]);
+let spotlightDir = new Vector3([0, -0.5, -1]);
+let spotlightAngle = 15.0;
+let spotlightCosCutoff = Math.cos(spotlightAngle * Math.PI / 180.0);
+let spotlightExponent = 30.0;
+
+// << NEW: Variable for spotlight visual model >>
+let spotlightVisualSphere = null;
+
+
 // Uniform locations
 let u_ModelMatrix, u_ViewMatrix, u_ProjMatrix, u_NormalMatrix, u_Color;
-let u_ambientColor, u_diffuseColor, u_specularColor; // These will be updated by sliders
-let u_lightDirection, u_lightLocation, u_eyePosition, u_VisualizeNormals;
-let visualizeNormals = false;  
+let u_ambientColor, u_diffuseColor, u_specularColor;
+let u_lightDirection, u_lightLocation, u_eyePosition, u_VisualizeNormals, u_LightingOn;
+let u_SpotlightPos, u_SpotlightDir, u_SpotlightCosCutoff, u_SpotlightExponent;
 
-// Slider DOM element references
+// Global states
+let visualizeNormals = false;
+let isLightingOn = true;
+
+// Slider DOM element references (existing)
 let lightXSlider, lightYSlider, lightZSlider;
 let ambientRSlider, ambientGSlider, ambientBSlider;
 let diffuseRSlider, diffuseGSlider, diffuseBSlider;
@@ -100,6 +149,7 @@ let specularRSlider, specularGSlider, specularBSlider;
 
 
 function drawModel(model) {
+    // ... (drawModel function remains the same)
     modelMatrix.setIdentity();
     modelMatrix.translate(model.translate[0], model.translate[1], model.translate[2]);
     modelMatrix.rotate(model.rotate[0], 1, 0, 0);
@@ -121,6 +171,7 @@ function drawModel(model) {
 }
 
 function initBuffer(attibuteName, n) {
+    // ... (initBuffer function remains the same)
     let shaderBuffer = gl.createBuffer();
     if(!shaderBuffer) { console.log("Can't create buffer."); return -1; }
     gl.bindBuffer(gl.ARRAY_BUFFER, shaderBuffer);
@@ -131,6 +182,7 @@ function initBuffer(attibuteName, n) {
 }
 
 function animateLight() {
+    // ... (animateLight function for point light remains the same)
     let now = Date.now();
     let angle = (now / 1000) * lightAnimationSpeed;
     let animatedOffsetX = Math.sin(angle) * lightAnimationMagnitude;
@@ -139,18 +191,34 @@ function animateLight() {
 
 function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    animateLight(); 
-    
-    // Update light property uniforms
+    animateLight();
+
     gl.uniform3fv(u_ambientColor, ambientLightColor.elements);
     gl.uniform3fv(u_diffuseColor, diffuseLightColor.elements);
     gl.uniform3fv(u_specularColor, specularLightColor.elements);
-    
+
+    gl.uniform3fv(u_lightDirection, lightDirection.elements);
     gl.uniform3fv(u_lightLocation, lightLocation.elements);
+    if (typeof pointLightSphere !== 'undefined' && pointLightSphere) {
+        pointLightSphere.setTranslate(lightLocation.elements[0], lightLocation.elements[1], lightLocation.elements[2]);
+    }
+
+    // << NEW: Update Spotlight Visual Sphere Position >>
+    if (spotlightVisualSphere) {
+        spotlightVisualSphere.setTranslate(spotlightPos.elements[0], spotlightPos.elements[1], spotlightPos.elements[2]);
+    }
+
+    gl.uniform3fv(u_SpotlightPos, spotlightPos.elements);
+    let normalizedSpotlightDir = new Vector3(spotlightDir.elements).normalize();
+    gl.uniform3fv(u_SpotlightDir, normalizedSpotlightDir.elements);
+    gl.uniform1f(u_SpotlightCosCutoff, spotlightCosCutoff);
+    gl.uniform1f(u_SpotlightExponent, spotlightExponent);
+
     gl.uniform3fv(u_eyePosition, camera.eye.elements);
     gl.uniformMatrix4fv(u_ViewMatrix, false, camera.viewMatrix.elements);
     gl.uniformMatrix4fv(u_ProjMatrix, false, camera.projMatrix.elements);
     gl.uniform1i(u_VisualizeNormals, visualizeNormals ? 1 : 0);
+    gl.uniform1i(u_LightingOn, isLightingOn ? 1 : 0);
 
     for(let m of models) {
         drawModel(m);
@@ -159,27 +227,23 @@ function draw() {
 }
 
 function addModel(color, shapeType) {
+    // ... (addModel function remains the same)
     let model = null;
-    if (shapeType === "cube") model = new Cube(color);
-    else if (shapeType === "sphere") model = new Sphere(color);
+    if (shapeType === "cube") model = new Cube(color); //
+    else if (shapeType === "sphere") model = new Sphere(color); //
     if (model) models.push(model);
     return model;
 }
 
-function onZoomInput(value) {
-    camera.zoom(1.0 + (value - 1) / 10); 
-}
-
-function onLightPositionInput() {
+function onZoomInput(value) { /* ... remains the same ... */ camera.zoom(1.0 + (value - 1) / 10); }
+function onLightPositionInput() { /* ... remains the same ... */
     if (lightXSlider && lightYSlider && lightZSlider) {
-        lightBaseX = parseFloat(lightXSlider.value); 
+        lightBaseX = parseFloat(lightXSlider.value);
         lightLocation.elements[1] = parseFloat(lightYSlider.value);
         lightLocation.elements[2] = parseFloat(lightZSlider.value);
     }
 }
-
-// << NEW function to handle light property slider inputs >>
-function onLightPropertiesInput() {
+function onLightPropertiesInput() { /* ... remains the same ... */
     if (ambientRSlider && ambientGSlider && ambientBSlider) {
         ambientLightColor.elements[0] = parseFloat(ambientRSlider.value);
         ambientLightColor.elements[1] = parseFloat(ambientGSlider.value);
@@ -195,11 +259,9 @@ function onLightPropertiesInput() {
         specularLightColor.elements[1] = parseFloat(specularGSlider.value);
         specularLightColor.elements[2] = parseFloat(specularBSlider.value);
     }
-    // Uniforms will be updated in the draw loop
 }
-
-window.addEventListener("keydown", function(event) {
-    let speed = 0.1, panSpeed = 2.0; 
+window.addEventListener("keydown", function(event) { /* ... remains the same ... */
+    let speed = 0.1, panSpeed = 2.0;
     switch (event.key) {
         case "w": camera.moveForward(speed); break;
         case "s": camera.moveForward(-speed); break;
@@ -207,10 +269,13 @@ window.addEventListener("keydown", function(event) {
         case "d": camera.pan(-panSpeed); break;
     }
 });
-
-function toggleNormalVisualization() {
+function toggleNormalVisualization() { /* ... remains the same ... */
     visualizeNormals = !visualizeNormals;
     console.log("Normal visualization: " + (visualizeNormals ? "ON" : "OFF"));
+}
+function toggleLighting() { /* ... remains the same ... */
+    isLightingOn = !isLightingOn;
+    console.log("Lighting: " + (isLightingOn ? "ON" : "OFF"));
 }
 
 function main() {
@@ -218,38 +283,38 @@ function main() {
     gl = canvas.getContext("webgl");
     if(!gl) { console.log("Failed to get webgl context"); return -1; }
 
-    // Light Position Sliders
-    lightXSlider = document.getElementById("lightXSlider");
-    lightYSlider = document.getElementById("lightYSlider");
-    lightZSlider = document.getElementById("lightZSlider");
+    // Initialize slider references (existing code)
+    lightXSlider = document.getElementById("lightXSlider"); /* ... */
+    lightYSlider = document.getElementById("lightYSlider"); /* ... */
+    lightZSlider = document.getElementById("lightZSlider"); /* ... */
     if (lightXSlider && lightYSlider && lightZSlider) {
-        lightBaseX = lightLocation.elements[0]; 
+        lightBaseX = lightLocation.elements[0];
         lightXSlider.value = lightBaseX;
         lightYSlider.value = lightLocation.elements[1];
         lightZSlider.value = lightLocation.elements[2];
     }
-
-    // << NEW: Get references to light property sliders and set initial values >>
-    ambientRSlider = document.getElementById("ambientRSlider");
-    ambientGSlider = document.getElementById("ambientGSlider");
-    ambientBSlider = document.getElementById("ambientBSlider");
+    ambientRSlider = document.getElementById("ambientRSlider"); /* ... */
+    // ... (rest of slider initializations)
+    ambientGSlider = document.getElementById("ambientGSlider"); 
+    ambientBSlider = document.getElementById("ambientBSlider"); 
     if(ambientRSlider) ambientRSlider.value = ambientLightColor.elements[0];
     if(ambientGSlider) ambientGSlider.value = ambientLightColor.elements[1];
     if(ambientBSlider) ambientBSlider.value = ambientLightColor.elements[2];
 
-    diffuseRSlider = document.getElementById("diffuseRSlider");
-    diffuseGSlider = document.getElementById("diffuseGSlider");
-    diffuseBSlider = document.getElementById("diffuseBSlider");
+    diffuseRSlider = document.getElementById("diffuseRSlider"); 
+    diffuseGSlider = document.getElementById("diffuseGSlider"); 
+    diffuseBSlider = document.getElementById("diffuseBSlider"); 
     if(diffuseRSlider) diffuseRSlider.value = diffuseLightColor.elements[0];
     if(diffuseGSlider) diffuseGSlider.value = diffuseLightColor.elements[1];
     if(diffuseBSlider) diffuseBSlider.value = diffuseLightColor.elements[2];
 
-    specularRSlider = document.getElementById("specularRSlider");
-    specularGSlider = document.getElementById("specularGSlider");
-    specularBSlider = document.getElementById("specularBSlider");
+    specularRSlider = document.getElementById("specularRSlider"); 
+    specularGSlider = document.getElementById("specularGSlider"); 
+    specularBSlider = document.getElementById("specularBSlider"); 
     if(specularRSlider) specularRSlider.value = specularLightColor.elements[0];
     if(specularGSlider) specularGSlider.value = specularLightColor.elements[1];
     if(specularBSlider) specularBSlider.value = specularLightColor.elements[2];
+
 
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -257,7 +322,9 @@ function main() {
 
     if(!initShaders(gl, VSHADER, FSHADER)) { console.log("Failed to initialize shaders."); return -1; }
 
+    // Retrieve uniform locations (existing + spotlight)
     u_ModelMatrix = gl.getUniformLocation(gl.program, "u_ModelMatrix");
+    // ... (all other existing uniform locations) ...
     u_ViewMatrix = gl.getUniformLocation(gl.program, "u_ViewMatrix");
     u_ProjMatrix = gl.getUniformLocation(gl.program, "u_ProjMatrix");
     u_NormalMatrix = gl.getUniformLocation(gl.program, "u_NormalMatrix");
@@ -268,28 +335,43 @@ function main() {
     u_lightDirection = gl.getUniformLocation(gl.program, "u_lightDirection");
     u_lightLocation = gl.getUniformLocation(gl.program, "u_lightLocation");
     u_eyePosition = gl.getUniformLocation(gl.program, "u_eyePosition");
-    u_VisualizeNormals = gl.getUniformLocation(gl.program, "u_VisualizeNormals"); 
+    u_VisualizeNormals = gl.getUniformLocation(gl.program, "u_VisualizeNormals");
+    u_LightingOn = gl.getUniformLocation(gl.program, "u_LightingOn");
+    u_SpotlightPos = gl.getUniformLocation(gl.program, "u_SpotlightPos");
+    u_SpotlightDir = gl.getUniformLocation(gl.program, "u_SpotlightDir");
+    u_SpotlightCosCutoff = gl.getUniformLocation(gl.program, "u_SpotlightCosCutoff");
+    u_SpotlightExponent = gl.getUniformLocation(gl.program, "u_SpotlightExponent");
 
-    let n_shapes = 3; 
-    for (let i = 0; i < n_shapes; i++){ 
+    // Model creation (existing code)
+    let n_shapes = 3;
+    for (let i = 0; i < n_shapes; i++){
       let r = Math.random(), g = Math.random(), b = Math.random();
-      let x_pos = (i - (n_shapes - 1) / 2.0) * 2.0; 
-      addModel([r,g,b], "cube").setTranslate(x_pos, -0.5, 0.0).setScale(0.5,0.5,0.5);
-      addModel([r,g,b], "sphere").setTranslate(x_pos, 0.5, 0.0).setScale(0.5,0.5,0.5);
+      let x_pos = (i - (n_shapes - 1) / 2.0) * 2.0;
+      let cube = addModel([r,g,b], "cube");
+      cube.setTranslate(x_pos, -0.5, 0.0);
+      cube.setScale(0.5,0.5,0.5);
+      let sphere = addModel([r,g,b], "sphere");
+      sphere.setTranslate(x_pos, 0.5, 0.0);
+      sphere.setScale(0.5,0.5,0.5);
     }
-    pointLightSphere = addModel([1,1,0], "sphere");
+    pointLightSphere = addModel([1,1,0], "sphere"); 
     pointLightSphere.setScale(0.1,0.1,0.1);
+
+    // << NEW: Create and configure spotlight visual representation >>
+    spotlightVisualSphere = addModel([0.8, 0.8, 1.0], "sphere"); // Light blue color
+    spotlightVisualSphere.setScale(0.1, 0.1, 0.1); 
+    // Its position will be updated in the draw loop.
 
     vertexBuffer = initBuffer("a_Position", 3);
     normalBuffer = initBuffer("a_Normal", 3);
     indexBuffer = gl.createBuffer();
     if(!indexBuffer) { console.log("Can't create buffer."); return -1; }
 
-    // Initial uniform settings (will be updated by sliders in draw loop)
     gl.uniform3fv(u_lightDirection, lightDirection.elements);
     gl.uniform1i(u_VisualizeNormals, visualizeNormals ? 1 : 0);
+    gl.uniform1i(u_LightingOn, isLightingOn ? 1 : 0);
 
     camera = new Camera();
-    g_lastTime = Date.now(); 
+    g_lastTime = Date.now();
     draw();
 }
