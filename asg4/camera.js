@@ -2,7 +2,7 @@ class Camera {
     constructor() {
         this.near = 0.1;
         this.far = 1000;
-        this.fov = 60;
+        this.fov = 80;
 
         this.eye = new Vector3([0, 0, 5]);
         this.center = new Vector3([0, 0, 0]);

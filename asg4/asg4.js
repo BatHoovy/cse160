@@ -22,8 +22,8 @@ let FSHADER=`
     precision mediump float;
     uniform vec3 u_Color;
     uniform vec3 u_ambientColor;
-    uniform vec3 u_diffuseColor;    // Used by all lights for now
-    uniform vec3 u_specularColor;   // Used by all lights for now
+    uniform vec3 u_diffuseColor;    
+    uniform vec3 u_specularColor;  
     uniform vec3 u_lightDirection;  // Directional light 1
     uniform vec3 u_lightLocation;   // Point light 2 position
     uniform vec3 u_eyePosition;
@@ -32,8 +32,8 @@ let FSHADER=`
 
     // Spotlight Uniforms
     uniform vec3 u_SpotlightPos;
-    uniform vec3 u_SpotlightDir;       // Normalized direction spotlight is pointing
-    uniform float u_SpotlightCosCutoff;  // Cosine of the spotlight's half-angle
+    uniform vec3 u_SpotlightDir;       
+    uniform float u_SpotlightCosCutoff;  
     uniform float u_SpotlightExponent;   // Spotlight falloff
 
     varying vec3 n;
@@ -121,13 +121,12 @@ let diffuseLightColor = new Vector3([0.8, 0.8, 0.8]);
 let specularLightColor = new Vector3([1.0, 1.0, 1.0]);
 
 // Spotlight Properties
-let spotlightPos = new Vector3([0, 2, 3]);
+let spotlightPos = new Vector3([0, 1, 3]);
 let spotlightDir = new Vector3([0, -0.5, -1]);
 let spotlightAngle = 15.0;
 let spotlightCosCutoff = Math.cos(spotlightAngle * Math.PI / 180.0);
 let spotlightExponent = 30.0;
 
-// << NEW: Variable for spotlight visual model >>
 let spotlightVisualSphere = null;
 
 
@@ -141,7 +140,6 @@ let u_SpotlightPos, u_SpotlightDir, u_SpotlightCosCutoff, u_SpotlightExponent;
 let visualizeNormals = false;
 let isLightingOn = true;
 
-// Slider DOM element references (existing)
 let lightXSlider, lightYSlider, lightZSlider;
 let ambientRSlider, ambientGSlider, ambientBSlider;
 let diffuseRSlider, diffuseGSlider, diffuseBSlider;
@@ -149,7 +147,6 @@ let specularRSlider, specularGSlider, specularBSlider;
 
 
 function drawModel(model) {
-    // ... (drawModel function remains the same)
     modelMatrix.setIdentity();
     modelMatrix.translate(model.translate[0], model.translate[1], model.translate[2]);
     modelMatrix.rotate(model.rotate[0], 1, 0, 0);
@@ -171,7 +168,6 @@ function drawModel(model) {
 }
 
 function initBuffer(attibuteName, n) {
-    // ... (initBuffer function remains the same)
     let shaderBuffer = gl.createBuffer();
     if(!shaderBuffer) { console.log("Can't create buffer."); return -1; }
     gl.bindBuffer(gl.ARRAY_BUFFER, shaderBuffer);
@@ -182,7 +178,6 @@ function initBuffer(attibuteName, n) {
 }
 
 function animateLight() {
-    // ... (animateLight function for point light remains the same)
     let now = Date.now();
     let angle = (now / 1000) * lightAnimationSpeed;
     let animatedOffsetX = Math.sin(angle) * lightAnimationMagnitude;
@@ -203,7 +198,6 @@ function draw() {
         pointLightSphere.setTranslate(lightLocation.elements[0], lightLocation.elements[1], lightLocation.elements[2]);
     }
 
-    // << NEW: Update Spotlight Visual Sphere Position >>
     if (spotlightVisualSphere) {
         spotlightVisualSphere.setTranslate(spotlightPos.elements[0], spotlightPos.elements[1], spotlightPos.elements[2]);
     }
@@ -227,7 +221,6 @@ function draw() {
 }
 
 function addModel(color, shapeType) {
-    // ... (addModel function remains the same)
     let model = null;
     if (shapeType === "cube") model = new Cube(color); //
     else if (shapeType === "sphere") model = new Sphere(color); //
@@ -235,15 +228,15 @@ function addModel(color, shapeType) {
     return model;
 }
 
-function onZoomInput(value) { /* ... remains the same ... */ camera.zoom(1.0 + (value - 1) / 10); }
-function onLightPositionInput() { /* ... remains the same ... */
+function onZoomInput(value) { camera.zoom(1.0 + (value - 1) / 10); }
+function onLightPositionInput() { 
     if (lightXSlider && lightYSlider && lightZSlider) {
         lightBaseX = parseFloat(lightXSlider.value);
         lightLocation.elements[1] = parseFloat(lightYSlider.value);
         lightLocation.elements[2] = parseFloat(lightZSlider.value);
     }
 }
-function onLightPropertiesInput() { /* ... remains the same ... */
+function onLightPropertiesInput() { 
     if (ambientRSlider && ambientGSlider && ambientBSlider) {
         ambientLightColor.elements[0] = parseFloat(ambientRSlider.value);
         ambientLightColor.elements[1] = parseFloat(ambientGSlider.value);
@@ -260,7 +253,7 @@ function onLightPropertiesInput() { /* ... remains the same ... */
         specularLightColor.elements[2] = parseFloat(specularBSlider.value);
     }
 }
-window.addEventListener("keydown", function(event) { /* ... remains the same ... */
+window.addEventListener("keydown", function(event) { 
     let speed = 0.1, panSpeed = 2.0;
     switch (event.key) {
         case "w": camera.moveForward(speed); break;
@@ -269,11 +262,11 @@ window.addEventListener("keydown", function(event) { /* ... remains the same ...
         case "d": camera.pan(-panSpeed); break;
     }
 });
-function toggleNormalVisualization() { /* ... remains the same ... */
+function toggleNormalVisualization() { 
     visualizeNormals = !visualizeNormals;
     console.log("Normal visualization: " + (visualizeNormals ? "ON" : "OFF"));
 }
-function toggleLighting() { /* ... remains the same ... */
+function toggleLighting() { 
     isLightingOn = !isLightingOn;
     console.log("Lighting: " + (isLightingOn ? "ON" : "OFF"));
 }
@@ -283,18 +276,16 @@ function main() {
     gl = canvas.getContext("webgl");
     if(!gl) { console.log("Failed to get webgl context"); return -1; }
 
-    // Initialize slider references (existing code)
-    lightXSlider = document.getElementById("lightXSlider"); /* ... */
-    lightYSlider = document.getElementById("lightYSlider"); /* ... */
-    lightZSlider = document.getElementById("lightZSlider"); /* ... */
+    lightXSlider = document.getElementById("lightXSlider"); 
+    lightYSlider = document.getElementById("lightYSlider"); 
+    lightZSlider = document.getElementById("lightZSlider"); 
     if (lightXSlider && lightYSlider && lightZSlider) {
         lightBaseX = lightLocation.elements[0];
         lightXSlider.value = lightBaseX;
         lightYSlider.value = lightLocation.elements[1];
         lightZSlider.value = lightLocation.elements[2];
     }
-    ambientRSlider = document.getElementById("ambientRSlider"); /* ... */
-    // ... (rest of slider initializations)
+    ambientRSlider = document.getElementById("ambientRSlider"); 
     ambientGSlider = document.getElementById("ambientGSlider"); 
     ambientBSlider = document.getElementById("ambientBSlider"); 
     if(ambientRSlider) ambientRSlider.value = ambientLightColor.elements[0];
@@ -322,9 +313,7 @@ function main() {
 
     if(!initShaders(gl, VSHADER, FSHADER)) { console.log("Failed to initialize shaders."); return -1; }
 
-    // Retrieve uniform locations (existing + spotlight)
     u_ModelMatrix = gl.getUniformLocation(gl.program, "u_ModelMatrix");
-    // ... (all other existing uniform locations) ...
     u_ViewMatrix = gl.getUniformLocation(gl.program, "u_ViewMatrix");
     u_ProjMatrix = gl.getUniformLocation(gl.program, "u_ProjMatrix");
     u_NormalMatrix = gl.getUniformLocation(gl.program, "u_NormalMatrix");
@@ -342,11 +331,11 @@ function main() {
     u_SpotlightCosCutoff = gl.getUniformLocation(gl.program, "u_SpotlightCosCutoff");
     u_SpotlightExponent = gl.getUniformLocation(gl.program, "u_SpotlightExponent");
 
-    // Model creation (existing code)
-    let n_shapes = 3;
+    // Model creation
+    let n_shapes = 2;
     for (let i = 0; i < n_shapes; i++){
       let r = Math.random(), g = Math.random(), b = Math.random();
-      let x_pos = (i - (n_shapes - 1) / 2.0) * 2.0;
+      let x_pos = (i - (n_shapes - 1) / 2.0) * 4.0;
       let cube = addModel([r,g,b], "cube");
       cube.setTranslate(x_pos, -0.5, 0.0);
       cube.setScale(0.5,0.5,0.5);
@@ -354,14 +343,48 @@ function main() {
       sphere.setTranslate(x_pos, 0.5, 0.0);
       sphere.setScale(0.5,0.5,0.5);
     }
+    
+    let head = addModel([1,0.75,1],"cube");
+    head.setTranslate(0,-0.5,0.3);
+    head.setScale(0.5,0.5,0.5);
+    
+
+    //Eyes
+    const eyeColor = [0.5,0.5,0.5];
+    const eyeScale = [0.08, 0.08, 0.08];
+    const headY = -0.5; 
+    const headZFront = 0.4 + (0.5/2); 
+
+    let leftEye = addModel(eyeColor, "sphere");
+    leftEye.setTranslate(-0.15, headY + 0.1, headZFront +0.2); 
+    leftEye.setScale(eyeScale[0], eyeScale[1], eyeScale[2]);
+
+    let rightEye = addModel(eyeColor, "sphere");
+    rightEye.setTranslate(0.15, headY + 0.1, headZFront +0.2); 
+    rightEye.setScale(eyeScale[0], eyeScale[1], eyeScale[2]);
+
+    // Arms 
+    const armColor = [0,1,0]; 
+    const armScale = [0.1, 0.4, 0.1]; 
+    const armY = headY - 0.25; 
+
+    let leftArm = addModel(armColor, "cube");
+    leftArm.setTranslate(-0.5, armY+0.4, 0.4); 
+    leftArm.setScale(armScale[0], armScale[1], armScale[2]);
+    leftArm.setRotate(0,0,45,1); 
+
+    let rightArm = addModel(armColor, "cube");
+    rightArm.setTranslate(0.5, armY+0.4, 0.4); 
+    rightArm.setScale(armScale[0], armScale[1], armScale[2]);
+    rightArm.setRotate(0,0,-45,1); 
+
     pointLightSphere = addModel([1,1,0], "sphere"); 
     pointLightSphere.setScale(0.1,0.1,0.1);
 
-    // << NEW: Create and configure spotlight visual representation >>
-    spotlightVisualSphere = addModel([0.8, 0.8, 1.0], "sphere"); // Light blue color
+    
+    spotlightVisualSphere = addModel([0.8, 0.8, 1.0], "sphere"); 
     spotlightVisualSphere.setScale(0.1, 0.1, 0.1); 
-    // Its position will be updated in the draw loop.
-
+    
     vertexBuffer = initBuffer("a_Position", 3);
     normalBuffer = initBuffer("a_Normal", 3);
     indexBuffer = gl.createBuffer();
