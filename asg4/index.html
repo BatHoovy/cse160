@@ -3,19 +3,16 @@
         <meta charset="utf-8">
         <title>ASG 4</title>
 
-        <!-- Load external libs -->
         <script src="lib/cuon-matrix-cse160.js"></script>
         <script src="lib/cuon-utils.js"></script>
         <script src="lib/webgl-debug.js"></script>
         <script src="lib/webgl-utils.js"></script>
 
-        <!-- Load internal libs -->
         <script src="camera.js"></script>
         <script src="models/model.js"></script>
         <script src="models/cube.js"></script>
         <script src="models/sphere.js"></script>
 
-        <!-- Load main -->
         <script src="asg4.js"></script>
     </head>
 
@@ -23,7 +20,48 @@
         <canvas id="canvas" width="400" height="400"></canvas>
 
         <br><br>
-        <label>Zoom Out:</label>
-        <input id="zoomSlider" value="1" type="range" min="1" max="20" oninput="onZoomInput(this.value)"></input>
+        <label>Zoom:</label>
+        <input id="zoomSlider" value="1" type="range" min="-10" max="20" oninput="onZoomInput(this.value)"></input>
+        
+        <br><br>
+        <button onclick="toggleNormalVisualization()">Toggle Normal Visualization</button>
+        <button onclick="toggleLighting()">Toggle Lighting</button> <br><br>
+        <div>
+            <label>Light X:</label>
+            <input id="lightXSlider" type="range" min="-5" max="5" value="0.0" step="0.1" oninput="onLightPositionInput()"></input>
+            <label>Light Y:</label>
+            <input id="lightYSlider" type="range" min="-5" max="5" value="0.5" step="0.1" oninput="onLightPositionInput()"></input>
+            <label>Light Z:</label>
+            <input id="lightZSlider" type="range" min="-5" max="5" value="1.0" step="0.1" oninput="onLightPositionInput()"></input>
+        </div>
+
+        <br><br>
+        <div>
+            <strong>Ambient Light:</strong><br>
+            <label>R:</label>
+            <input id="ambientRSlider" type="range" min="0" max="1" value="0.2" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>G:</label>
+            <input id="ambientGSlider" type="range" min="0" max="1" value="0.2" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>B:</label>
+            <input id="ambientBSlider" type="range" min="0" max="1" value="0.2" step="0.01" oninput="onLightPropertiesInput()"></input>
+        </div>
+        <div>
+            <strong>Diffuse Light:</strong><br>
+            <label>R:</label>
+            <input id="diffuseRSlider" type="range" min="0" max="1" value="0.8" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>G:</label>
+            <input id="diffuseGSlider" type="range" min="0" max="1" value="0.8" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>B:</label>
+            <input id="diffuseBSlider" type="range" min="0" max="1" value="0.8" step="0.01" oninput="onLightPropertiesInput()"></input>
+        </div>
+        <div>
+            <strong>Specular Light:</strong><br>
+            <label>R:</label>
+            <input id="specularRSlider" type="range" min="0" max="1" value="1.0" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>G:</label>
+            <input id="specularGSlider" type="range" min="0" max="1" value="1.0" step="0.01" oninput="onLightPropertiesInput()"></input>
+            <label>B:</label>
+            <input id="specularBSlider" type="range" min="0" max="1" value="1.0" step="0.01" oninput="onLightPropertiesInput()"></input>
+        </div>
     </body>
 </html>
